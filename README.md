@@ -32,3 +32,21 @@ RxSocket.fromConnections({"localhost", 8080}, {"localhost", 8081})
     :filter(function(data) return tonumber(data) % 2 == 0 end)
     :map(function(data) return data .. "!" end)
     :subscribe(print)
+```
+
+## Testing example
+
+- Set up two server instances on different ports:
+
+```
+lua server.lua 8080
+lua server.lua 8081
+```
+
+- Run the client example for these connections:
+
+```
+lua example.lua 8081 8081
+```
+
+The `example.lua` can be used for testing the socket for both single and multiple connections. If a single port is passed, it will use `fromConnection` function.

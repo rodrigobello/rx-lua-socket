@@ -1,45 +1,36 @@
-local socket = require("socket")
+local RxSocket = require("rx-lua-socket")
+local RxSocket = require("rx-lua-socket")
 
--- Main logic function
-local function main_logic()
-    print("Starting main logic")
-
-    -- Simulate doing some work with a loop
-    for i = 1, 10 do
-        print("Main logic step " .. i)
-
-        -- Ping the server when i == 5
-        if i == 5 then
-            print("Pinging the server...")
-            local client = socket.connect("localhost", 12345)
-            if client then
-                client:send("Ping\n")
-                local response, err = client:receive()
-                if response then
-                    print("Server response: " .. response)
-                else
-                    print("Error receiving from server: " .. err)
-                end
-                client:close()
-            else
-                print("Failed to connect to the server.")
-            end
-        end
-
-        socket.sleep(1)
-        coroutine.yield()
-    end
-
-    print("Main logic completed")
+local args = {...}
+local ports = {}
+for _, port in ipairs(args) do
+    table.insert(ports, tonumber(port))
 end
 
+if #ports == 0 then
+    print("Usage: lua example.lua <port1> <port2> ... <portN>")
+elseif #ports == 1 then
+    print("Running socket for a single connection...")
+    RxSocket.fromConnection("localhost", ports[1])
+    :map(function(value) return "Received: " .. value end)
+    :subscribe(
+        function(data) print(data) end,
+        function(err) print("Error: " .. err) end,
+        function() print("Connection closed.") end
+    )
+else
+    print("Running socket for multiple connections...")
 
--- Coroutine to run the main logic
-local logic_co = coroutine.create(main_logic)
-
--- Run both coroutines concurrently
-while coroutine.status(logic_co) ~= "dead" do
-    if coroutine.status(logic_co) ~= "dead" then
-        assert(coroutine.resume(logic_co))
+    connections = {}
+    for _, port in ipairs(ports) do
+        table.insert(connections, {"localhost", port})
     end
+
+    RxSocket.fromConnections(connections)
+        :map(function(value) return "Received: " .. value end)
+        :subscribe(
+            function(data) print(data) end,
+            function(err) print("Error: " .. err) end,
+            function() print("Connection closed.") end
+        )
 end

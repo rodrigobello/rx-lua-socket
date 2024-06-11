@@ -1,26 +1,30 @@
 local socket = require("socket")
 
-local server = assert(socket.bind("localhost", 8080))
-server:settimeout(0) -- Set the server to non-blocking mode
-print("Server listening on port 8080")
+if #arg < 1 then
+    print("Usage: lua server.lua <port>")
+    os.exit(1)
+end
+local port = tonumber(arg[1])
+local server = assert(socket.bind("*", port))
+local ip, port = server:getsockname()
 
-local clients = {}
+print("Server is running on port " .. port)
 
 while true do
     local client = server:accept()
-    if client then
-        client:settimeout(0) -- Set client to non-blocking mode
-        table.insert(clients, client)
-    end
-
-    for i, client in ipairs(clients) do
-        local line, err = client:receive()
-        if line then
-            print("Received: " .. line)
-            client:send("Pong: " .. line .. "\n")
-        elseif err == "closed" then
-            table.remove(clients, i)
-            client:close()
+    client:settimeout(10)
+    while true do
+        local message = {
+            value = math.random(1, 100),
+            source = "server on port " .. port
+        }
+        local line = string.format('{"value": %d, "source": "%s"}\n', message.value, message.source)
+        local sent, err = client:send(line)
+        if not sent then
+            print("Error sending data: " .. err)
+            break
         end
+        socket.sleep(1) -- Send data every second
     end
+    client:close()
 end
